@@ -84,14 +84,16 @@ main(int argc, char *argv[])
             goto end;
         }
         
-        int uid = 0;
         if (filter_user != NULL) {
+            int uid = 0;
             while (fgets(line, 256, status_file) != NULL) {
                 if (sscanf(line, "Uid:%*[ \t]%d", &uid) > 0) break;
             }
+
             char *real_username = getpwuid(uid)->pw_name;
-            if (strncmp(real_username, filter_user, 255) != 0)
+            if (strncmp(real_username, filter_user, 255) != 0) {
                 goto end;
+            }
         }
 
         if (strstr(link_realpath, filter_execname) != NULL) {
