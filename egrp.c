@@ -10,19 +10,21 @@
 
 #define EXIT_HELP 2
 
-char *strnstr(const char *, const char *, size_t);
-
 int
 main(int argc, char *argv[])
 {
     int flag_verbose = 0;
+    char *filter_user = NULL;
     char *filter_execname = NULL;
 
     char opt;
-    while ((opt = getopt(argc, argv, "vf:")) > 0) {
+    while ((opt = getopt(argc, argv, "vf:u:")) > 0) {
         switch (opt) {
             case 'f':
                 filter_execname = optarg;
+                break;
+            case 'u':
+                filter_user = optarg;
                 break;
             case 'v':
                 flag_verbose = 1;
@@ -53,12 +55,15 @@ main(int argc, char *argv[])
     while ((dirent = readdir(proc)) != NULL) {
         if (dirent->d_name[0] == '.') continue;
 
+        int pid = atoi(dirent->d_name); 
+        if (pid == 0) continue;
+
+        char *line = malloc(256);
         char *link_path = malloc(256);
         char *link_realpath = malloc(256);
-        char *status_file_path = malloc(256);
         char *proc_file_path = malloc(256);
-        
-        int current_pid = atoi(dirent->d_name);
+        char *status_file_path = malloc(256);
+        FILE *status_file = NULL;
 
         snprintf(proc_file_path, 255, "/proc/%s", dirent->d_name);
 
@@ -72,17 +77,36 @@ main(int argc, char *argv[])
         snprintf(link_path, 255, "/proc/%s/exe", dirent->d_name);
         if (!realpath(link_path, link_realpath)) goto end;
 
+        snprintf(status_file_path, 255, "/proc/%s/status", dirent->d_name);
+        status_file = fopen(status_file_path, "r");
+        if (!status_file) {
+            perror(status_file_path); 
+            goto end;
+        }
+        
+        int uid = 0;
+        if (filter_user != NULL) {
+            while (fgets(line, 256, status_file) != NULL) {
+                if (sscanf(line, "Uid:%*[ \t]%d", &uid) > 0) break;
+            }
+            char *real_username = getpwuid(uid)->pw_name;
+            if (strncmp(real_username, filter_user, 255) != 0)
+                goto end;
+        }
+
         if (strstr(link_realpath, filter_execname) != NULL) {
-            if (!flag_verbose) printf("%s\n",link_realpath);
-            else printf("%d: %s \n", current_pid, link_realpath);
+            if (!flag_verbose) printf("%d\n", pid);
+            else printf("%d: %s\n", pid, link_realpath);
         }
 
 
 end:
-        free(proc_file_path);
+        if (status_file) fclose(status_file);
         free(status_file_path);
+        free(proc_file_path);
         free(link_realpath);
         free(link_path);
+        free(line);
     }
     closedir(proc);
     
