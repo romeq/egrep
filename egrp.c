@@ -36,8 +36,8 @@ main(int argc, char *argv[])
         }
     }
     
-    if (argc <= 1 || filter_execname == NULL) {
-        printf("Usage: %s [OPTIONS...] \n\n", argv[0]);
+    if (argc <= 1 || !filter_execname) {
+        printf("Usage: %s OPTIONS \n\n", argv[0]);
         printf("OPTIONS:\n"
                 "\t-v: Verbose. Shows process names.\n"
                 "\t-f <keyword>: Find. Indicates keyword to search with. Required!\n"
@@ -55,12 +55,13 @@ main(int argc, char *argv[])
     char link_path[128];
     char real_username[128];
     char link_realpath[128];
+    char item_processname[128];
     char status_file_path[128];
     char proc_current_item[128];
     FILE *status_file;
     struct dirent *dirent;
-    while ((dirent = readdir(proc)) != NULL) {
-        if (dirent->d_name[0] == '.') continue;
+    while ((dirent = readdir(proc))) {
+        if (dirent->d_name[0] == '.') continue;  // 
 
         status_file = NULL;
 
@@ -76,10 +77,10 @@ main(int argc, char *argv[])
         }
         if ((item_stat.st_mode & S_IFMT) != S_IFDIR) goto end;
 
-        snprintf(link_path, 127, "/proc/%s/exe", dirent->d_name);
+        snprintf(link_path, 127, "%s/exe", proc_current_item);
         if (!realpath(link_path, link_realpath)) goto end;
 
-        snprintf(status_file_path, 127, "/proc/%s/status", dirent->d_name);
+        snprintf(status_file_path, 127, "%s/status", proc_current_item);
         status_file = fopen(status_file_path, "r");
         if (!status_file) {
             if (flag_verbose) perror(status_file_path); 
@@ -88,20 +89,29 @@ main(int argc, char *argv[])
         
         if (filter_user || flag_verbose) {
             int uid = 0;
-            while (fgets(line, 128, status_file) != NULL) {
-                if (sscanf(line, "Uid:%*[ \t]%d", &uid) > 0) break;
+            while (fgets(line, 128, status_file)) {
+                if (flag_verbose) sscanf(line, "Name:%*[ \t]%[^\t\n]\n", item_processname); 
+                if (sscanf(line, "Uid:%*[ \t]%d", &uid) > 0) break; // break after getting Uid
             }
 
             strncpy(real_username, getpwuid(uid)->pw_name, 127);
             if (filter_user && strncmp(real_username, filter_user, 128) != 0) {
                 goto end;
             }
+
         }
 
-        if (strstr(link_realpath, filter_execname) != NULL) {
-            if (!flag_verbose) printf("%d\n", pid);
-            else if (!filter_user) printf("%d: %s (%s)\n", pid, link_realpath, real_username);
-            else printf("%d: %s\n", pid, link_realpath);
+        if (strstr(link_realpath, filter_execname)) {
+            if (flag_verbose && !filter_user) { // verbose, not filtered
+                printf("%d: %s (%s) [%s]\n", 
+                        pid, link_realpath, item_processname, real_username); 
+            }
+            else if (filter_user && flag_verbose) { // verbose, filtered
+                printf("%d: %s (%s)\n", pid, link_realpath, item_processname);
+            }
+            else { // else (not verbose)
+                printf("%d\n", pid);
+            }
         }
 
 
