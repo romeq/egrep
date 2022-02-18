@@ -35,15 +35,19 @@ main(int argc, char *argv[])
                 return EXIT_HELP;
         }
     }
-    
-    if (argc <= 1 || !filter_execname) {
-        printf("Usage: %s OPTIONS \n\n", argv[0]);
+    if (argc >= 2 && !filter_execname) {
+        // wtf, no idea why but something sorts this and this works 
+        filter_execname = argv[argc - 1];
+    } else if (!filter_execname) {
+        printf("Usage: %s [OPTIONS] \n\n", argv[0]);
         printf("OPTIONS:\n"
                 "\t-v: Verbose. Shows process names.\n"
                 "\t-f <keyword>: Find. Indicates keyword to search with. Required!\n"
                 "\t-u <user>: Filter with user\n");
         return EXIT_HELP;
     }
+ 
+
 
     DIR *proc = opendir("/proc");
     if (!proc) { 
@@ -114,13 +118,11 @@ main(int argc, char *argv[])
             }
         }
 
-
 end:
         if (status_file) fclose(status_file);
     }
 
     closedir(proc);
-    
     return EXIT_SUCCESS;
 }
 
