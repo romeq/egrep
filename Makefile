@@ -1,6 +1,6 @@
 CC=clang
 CFLAGS+=-Wall -Wextra -Wpedantic -g
-RELEASE_FLAGS=-O3
+RELEASE_FLAGS=-Ofast
 SRC = $(wildcard *.c)
 OBJ = $(SRC:c=o)
 
