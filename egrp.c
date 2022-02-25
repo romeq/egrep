@@ -130,14 +130,14 @@ main(int argc, char *argv[])
                 printf("%d: %s (%s) [%s]\n", 
                     pid, link_realpath, item_processname, real_username); 
             else
-                printf("%d %s %s %s\n",
+                printf("%d %s '%s' %s\n",
                     pid, link_realpath, item_processname, real_username); 
         } else if (filter_user && flag_verbose) { // verbose, filtered
             if (!flag_nofanciness)
                 printf("%d: %s (%s)\n", 
                     pid, link_realpath, item_processname); 
             else
-                printf("%d %s %s\n",
+                printf("%d %s '%s'\n",
                     pid, link_realpath, item_processname); 
         } else { // else (not verbose)
             printf("%d\n", pid);
