@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <ctype.h>
 #include <pwd.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,12 +14,16 @@
 int
 main(int argc, char *argv[])
 {
+    if (argc < 1) return 1;
+
     int flag_verbose = 0;
+    int flag_case_insensitive = 0;
+    int flag_nofanciness = 0;
     char *filter_user = NULL;
     char *filter_execname = NULL;
 
     char opt;
-    while ((opt = getopt(argc, argv, "vf:u:")) > 0) {
+    while ((opt = getopt(argc, argv, "vcsf:u:")) > 0) {
         switch (opt) {
             case 'f':
                 filter_execname = optarg;
@@ -26,8 +31,14 @@ main(int argc, char *argv[])
             case 'u':
                 filter_user = optarg;
                 break;
+            case 's':
+                flag_nofanciness = 1;
+                break;
             case 'v':
                 flag_verbose = 1;
+                break;
+            case 'c':
+                flag_case_insensitive = 1;
                 break;
             case '?': 
             default:
@@ -35,20 +46,18 @@ main(int argc, char *argv[])
                 return EXIT_HELP;
         }
     }
-    if (argc >= 2 && !filter_execname) {
-        // wtf, no idea why but something sorts this and this works 
-        filter_execname = argv[argc - 1];
-    } else if (!filter_execname) {
+
+    if (!filter_execname) {
         printf("Usage: %s [OPTIONS] \n\n", argv[0]);
         printf("OPTIONS:\n"
-                "\t-v: Verbose. Shows process names.\n"
-                "\t-f <keyword>: Find. Indicates keyword to search with. Required!\n"
+                "\t-v: Verbose. Shows more information of each process\n"
+                "\t-c: Case insensitive search\n"
+                "\t-s: Script mode; Doesn't print fancy output\n"
+                "\t-f <keyword>: Process name to search. Required!\n"
                 "\t-u <user>: Filter with user\n");
         return EXIT_HELP;
     }
  
-
-
     DIR *proc = opendir("/proc");
     if (!proc) { 
         perror("/proc");
@@ -76,7 +85,6 @@ main(int argc, char *argv[])
 
         struct stat item_stat;
         if (stat(proc_current_item, &item_stat) < 0) {
-            if (flag_verbose) perror("stat");
             goto end;
         }
         if ((item_stat.st_mode & S_IFMT) != S_IFDIR) goto end;
@@ -101,21 +109,38 @@ main(int argc, char *argv[])
             strncpy(real_username, getpwuid(uid)->pw_name, 127);
             if (filter_user && strncmp(real_username, filter_user, 128) != 0) {
                 goto end;
-            }
-
+            } 
         }
 
-        if (strstr(link_realpath, filter_execname)) {
-            if (flag_verbose && !filter_user) { // verbose, not filtered
+        if (flag_case_insensitive) {
+            for (int i = 0; link_realpath[i]; i++) 
+                link_realpath[i] = tolower(link_realpath[i]);
+            for (int i = 0; filter_execname[i]; i++) 
+                filter_execname[i] = tolower(filter_execname[i]);
+
+            if (!strstr(link_realpath, filter_execname))
+                goto end;
+        }
+        else if (!flag_case_insensitive && !strstr(link_realpath, filter_execname))
+            goto end;
+
+        // print process info
+        if (flag_verbose && !filter_user) { // verbose, not filtered
+            if (!flag_nofanciness)
                 printf("%d: %s (%s) [%s]\n", 
-                        pid, link_realpath, item_processname, real_username); 
-            }
-            else if (filter_user && flag_verbose) { // verbose, filtered
-                printf("%d: %s (%s)\n", pid, link_realpath, item_processname);
-            }
-            else { // else (not verbose)
-                printf("%d\n", pid);
-            }
+                    pid, link_realpath, item_processname, real_username); 
+            else
+                printf("%d %s %s %s\n",
+                    pid, link_realpath, item_processname, real_username); 
+        } else if (filter_user && flag_verbose) { // verbose, filtered
+            if (!flag_nofanciness)
+                printf("%d: %s (%s)\n", 
+                    pid, link_realpath, item_processname); 
+            else
+                printf("%d %s %s\n",
+                    pid, link_realpath, item_processname); 
+        } else { // else (not verbose)
+            printf("%d\n", pid);
         }
 
 end:
