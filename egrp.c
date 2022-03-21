@@ -52,7 +52,7 @@ main(int argc, char *argv[])
         printf("OPTIONS:\n"
                 "\t-v: Verbose. Shows more information of each process\n"
                 "\t-c: Case insensitive search\n"
-                "\t-s: Script mode; Doesn't print fancy output\n"
+                "\t-s: Script mode. Doesn't print fancy output when verbose\n"
                 "\t-f <keyword>: Process name to search. Required!\n"
                 "\t-u <user>: Filter with user\n");
         return EXIT_HELP;
