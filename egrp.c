@@ -127,17 +127,17 @@ main(int argc, char *argv[])
         // print process info
         if (flag_verbose && !filter_user) { // verbose, not filtered
             if (!flag_nofanciness)
-                printf("%d: %s (%s) [%s]\n", 
-                    pid, link_realpath, item_processname, real_username); 
+                printf("%d: %s [%s] (%s)\n", 
+                    pid, link_realpath, real_username, item_processname); 
             else
-                printf("%d %s '%s' %s\n",
-                    pid, link_realpath, item_processname, real_username); 
+                printf("%d %s %s \"%s\"\n",
+                    pid, link_realpath, real_username, item_processname); 
         } else if (filter_user && flag_verbose) { // verbose, filtered
             if (!flag_nofanciness)
                 printf("%d: %s (%s)\n", 
                     pid, link_realpath, item_processname); 
             else
-                printf("%d %s '%s'\n",
+                printf("%d %s \"%s\"\n",
                     pid, link_realpath, item_processname); 
         } else { // else (not verbose)
             printf("%d\n", pid);
